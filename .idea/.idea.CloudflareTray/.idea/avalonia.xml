@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AvaloniaProject">
+    <option name="projectPerEditor">
+      <map>
+        <entry key="src/CloudflareTray/App.axaml" value="src/CloudflareTray/CloudflareTray.csproj" />
+        <entry key="src/CloudflareTray/Views/MainWindow.axaml" value="src/CloudflareTray/CloudflareTray.csproj" />
+        <entry key="src/CloudflareTray/Views/NewTunnelWindow.axaml" value="src/CloudflareTray/CloudflareTray.csproj" />
+        <entry key="src/CloudflareTray/Views/ServiceTokensWindow.axaml" value="src/CloudflareTray/CloudflareTray.csproj" />
+      </map>
+    </option>
+  </component>
+</project>

@@ -1,0 +1,113 @@
+# Runs the tests on every push/PR and builds ready-to-use archives for colleagues – Native AOT, no .NET required:
+#
+#   cloudflaretray-<version>-linux-x64.tar.gz   with install.sh
+#   cloudflaretray-<version>-win-x64.zip        with install.cmd
+#
+# Native AOT cannot compile for a different operating system, so each platform builds on its own runner.
+# For a v* tag, the archives are also attached to a GitHub release.
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet test tests/CloudflareTray.Tests -c Release
+
+  package:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: linux-x64
+            os: ubuntu-latest
+          - rid: win-x64
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      # clang is available on the Ubuntu runners, the zlib headers for the AOT linker not always
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update -q && sudo apt-get install -yq zlib1g-dev
+
+      - name: Determine version
+        run: |
+          echo "VERSION=$(dotnet msbuild src/CloudflareTray/CloudflareTray.csproj -getProperty:Version)" >> "$GITHUB_ENV"
+          # Minimum cloudflared version for the README, taken from CloudflaredLocator.RequiredVersion
+          echo "CLOUDFLARED_VERSION=$(sed -nE 's/.*RequiredVersion = new\(([0-9, ]+)\).*/\1/p' src/CloudflareTray/Services/CloudflaredLocator.cs | tr -d ' ' | tr ',' '.')" >> "$GITHUB_ENV"
+
+      - name: Publish
+        run: |
+          echo "NAME=cloudflaretray-$VERSION-${{ matrix.rid }}" >> "$GITHUB_ENV"
+          stage="stage/cloudflaretray-$VERSION-${{ matrix.rid }}"
+          dotnet publish src/CloudflareTray/CloudflareTray.csproj -c Release -r ${{ matrix.rid }} -o "$stage/app"
+          # Debug symbols of the native binary don't belong in the archive
+          rm -f "$stage/app/"*.dbg "$stage/app/"*.pdb
+
+      - name: Create archive (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          stage="stage/$NAME"
+          cp packaging/linux/install.sh packaging/linux/cloudflaretray.desktop "$stage/"
+          cp src/CloudflareTray/Assets/app.png "$stage/cloudflaretray.png"
+          cp src/CloudflareTray/Assets/app.svg "$stage/cloudflaretray.svg"
+          sed -e "s/@VERSION@/$VERSION/g" -e "s/@CLOUDFLARED_VERSION@/$CLOUDFLARED_VERSION/g" \
+            packaging/linux/README.txt > "$stage/README.txt"
+          tar -C stage -czf "$NAME.tar.gz" "$NAME"
+          echo "ARCHIVE=$NAME.tar.gz" >> "$GITHUB_ENV"
+
+      - name: Create archive (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          stage="stage/$NAME"
+          # sed keeps the BOM of install.ps1, which Windows PowerShell 5.1 needs for non-ASCII characters
+          sed "s/@VERSION@/$VERSION/g" packaging/windows/install.ps1 > "$stage/install.ps1"
+          cp packaging/windows/install.cmd "$stage/"
+          sed -e "s/@VERSION@/$VERSION/g" -e "s/@CLOUDFLARED_VERSION@/$CLOUDFLARED_VERSION/g" -e 's/\r$//' -e 's/$/\r/' \
+            packaging/windows/README.txt > "$stage/README.txt"
+          (cd stage && 7z a -tzip -bso0 "../$NAME.zip" "$NAME")
+          echo "ARCHIVE=$NAME.zip" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.NAME }}
+          path: ${{ env.ARCHIVE }}
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true

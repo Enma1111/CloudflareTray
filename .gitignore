@@ -1,0 +1,9 @@
+bin/
+obj/
+dist/
+stage/
+*.user
+*.DotSettings.user
+.idea/**/workspace.xml
+# Logs from runs where the data directory was relative to the working directory
+/CloudflareTray/

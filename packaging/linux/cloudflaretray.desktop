@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Cloudflare Tunnel Manager
+GenericName=Tunnel-Manager
+Comment=Start and monitor Cloudflare Access tunnels (SSH, RDP, SMB, TCP) from the tray
+Exec=cloudflaretray
+Icon=cloudflaretray
+Terminal=false
+Categories=Network;
+Keywords=Cloudflare;Tunnel;Zero Trust;Access;SSH;RDP;SMB;
+StartupNotify=true
+StartupWMClass=CloudflareTray

@@ -1,0 +1,63 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CloudflareTray.ViewModels"
+        x:Class="CloudflareTray.Views.NewTunnelWindow"
+        x:DataType="vm:NewTunnelViewModel"
+        Title="New tunnel"
+        Icon="/Assets/app.ico"
+        Width="420" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner">
+
+    <Window.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Margin" Value="0,8,0,4" />
+        </Style>
+        <Style Selector="TextBlock.hint">
+            <Setter Property="Margin" Value="0,4,0,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Opacity" Value="0.7" />
+        </Style>
+    </Window.Styles>
+
+    <StackPanel Margin="16">
+        <TextBlock Classes="label" Text="Profile" />
+        <ComboBox ItemsSource="{Binding ProfileNames}" IsEditable="True"
+                  Text="{Binding ProfileName, Mode=TwoWay}" HorizontalAlignment="Stretch"
+                  PlaceholderText="Choose a profile or enter a new name"
+                  ToolTip.Tip="Choose an existing profile or enter a new name" />
+        <TextBlock Classes="hint" Text="{Binding ProfileHint}" />
+
+        <TextBlock Classes="label" Text="Name" />
+        <TextBox Text="{Binding Name}" PlaceholderText="e.g. Nextcloud" />
+
+        <TextBlock Classes="label" Text="Protocol" />
+        <ComboBox ItemsSource="{Binding Protocols}" SelectedItem="{Binding Protocol}" HorizontalAlignment="Stretch" />
+
+        <TextBlock Classes="label" Text="Hostname" />
+        <TextBox Text="{Binding Hostname}" PlaceholderText="e.g. ssh.example.com" />
+
+        <TextBlock Classes="label" Text="Local address" />
+        <TextBox Text="{Binding LocalAddress}" PlaceholderText="e.g. localhost:2222" />
+
+        <TextBlock Classes="label" Text="Cloudflare service token (optional)" />
+        <ComboBox ItemsSource="{Binding CredentialChoices}" SelectedItem="{Binding SelectedCredential}"
+                  HorizontalAlignment="Stretch" />
+
+        <StackPanel IsVisible="{Binding IsNewCredential}">
+            <TextBlock Classes="label" Text="Name (e.g. as in the Cloudflare dashboard)" />
+            <TextBox Text="{Binding NewCredentialName}" PlaceholderText="e.g. tray-staff" />
+            <TextBlock Classes="label" Text="Client ID" />
+            <TextBox Text="{Binding ClientId}" PlaceholderText="….access" />
+            <TextBlock Classes="label" Text="Client secret" />
+            <TextBox Text="{Binding ClientSecret}" PasswordChar="•" />
+        </StackPanel>
+
+        <TextBlock Text="{Binding Error}" Foreground="#D9534F" TextWrapping="Wrap" Margin="0,12,0,0"
+                   IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,16,0,0">
+            <Button Content="Cancel" IsCancel="True" Click="OnCancelClick" />
+            <Button Content="Create" IsDefault="True" Classes="accent" Click="OnCreateClick" />
+        </StackPanel>
+    </StackPanel>
+</Window>

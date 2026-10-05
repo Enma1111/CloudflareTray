@@ -1,0 +1,206 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:CloudflareTray.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="520" d:DesignHeight="480"
+        x:Class="CloudflareTray.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/app.ico"
+        Width="520" Height="560" MinWidth="400" MinHeight="300"
+        Title="Cloudflare Tunnel Manager">
+
+    <Window.Styles>
+        <Style Selector="Ellipse.status">
+            <Setter Property="Width" Value="10" />
+            <Setter Property="Height" Value="10" />
+            <Setter Property="Fill" Value="#D9534F" />
+        </Style>
+        <Style Selector="Ellipse.status.running">
+            <Setter Property="Fill" Value="#2EA043" />
+        </Style>
+        <Style Selector="Ellipse.status.reconnecting">
+            <Setter Property="Fill" Value="#D29922" />
+        </Style>
+        <Style Selector="TextBlock.secondary">
+            <Setter Property="Opacity" Value="0.7" />
+        </Style>
+        <Style Selector="TextBlock.error">
+            <Setter Property="Foreground" Value="#D9534F" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="TextBlock.unused">
+            <Setter Property="Foreground" Value="#D29922" />
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Margin" Value="0,8,0,4" />
+        </Style>
+        <Style Selector="Border.bar">
+            <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
+            <Setter Property="Padding" Value="12,8" />
+        </Style>
+    </Window.Styles>
+
+    <DockPanel>
+        <!-- Toolbar -->
+        <Border DockPanel.Dock="Top" Classes="bar">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                <Button Grid.Column="0" Content="+ New tunnel" Command="{Binding NewTunnelCommand}" />
+                <Button Grid.Column="2" Content="Reload all" Command="{Binding ReloadCommand}"
+                        ToolTip.Tip="Re-read profiles from disk – changed tunnels are restarted" />
+                <Button Grid.Column="3" Content="Quit" Margin="6,0,0,0" Click="OnQuitClick"
+                        IsVisible="{Binding !IsTrayAvailable}"
+                        ToolTip.Tip="Stop all tunnels and quit the app" />
+            </Grid>
+        </Border>
+
+        <!-- Status bar -->
+        <Border DockPanel.Dock="Bottom" Classes="bar">
+            <StackPanel Spacing="4">
+                <TextBlock Classes="error" Text="{Binding Error}" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding ShowTrayHint}">
+                    <TextBlock Classes="secondary" Text="{Binding TrayHint}" TextWrapping="Wrap"
+                               VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Content="Don't show again" Padding="8,2" Margin="8,0,0,0"
+                            VerticalAlignment="Center" Command="{Binding DismissTrayHintCommand}" />
+                </Grid>
+                <TextBlock Text="{Binding StatusText}" />
+            </StackPanel>
+        </Border>
+
+        <TabControl>
+            <TabItem Header="Tunnels">
+                <Panel>
+                    <TextBlock IsVisible="{Binding IsEmpty}" Classes="secondary"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
+                               Text="No tunnels configured yet.&#x0a;Use “+ New tunnel” to create one." />
+
+                    <ScrollViewer>
+                        <ItemsControl ItemsSource="{Binding Groups}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ProfileGroupViewModel">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Classes="secondary"
+                                                   Margin="12,12,12,4" />
+                                        <TextBlock Text="No tunnels in this profile." Classes="secondary"
+                                                   Margin="12,0,12,8" IsVisible="{Binding IsEmpty}" />
+                                        <ItemsControl ItemsSource="{Binding Tunnels}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:TunnelItemViewModel">
+                                                    <Border Padding="12,10" BorderThickness="0,0,0,1"
+                                                            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                                                        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                                                            <Ellipse Grid.Row="0" Classes="status" Margin="0,0,10,0"
+                                                                     Classes.running="{Binding IsRunning}"
+                                                                     Classes.reconnecting="{Binding IsReconnecting}"
+                                                                     ToolTip.Tip="{Binding StatusText}" />
+                                                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Title}" FontWeight="SemiBold" />
+
+                                                            <TextBlock Grid.Row="1" Grid.Column="1" Classes="secondary">
+                                                                <Run Text="Hostname: " /><Run Text="{Binding Hostname}" />
+                                                            </TextBlock>
+                                                            <TextBlock Grid.Row="2" Grid.Column="1" Classes="secondary">
+                                                                <Run Text="Local:       " /><Run Text="{Binding LocalAddress}" />
+                                                            </TextBlock>
+
+                                                            <TextBlock Grid.Row="3" Grid.Column="1" Classes="error" Margin="0,4,0,0"
+                                                                       Text="{Binding Error}" IsVisible="{Binding HasError}" />
+
+                                                            <Panel Grid.Row="4" Grid.Column="1" Margin="0,6,0,0" HorizontalAlignment="Right">
+                                                                <StackPanel Orientation="Horizontal" Spacing="6"
+                                                                            IsVisible="{Binding !IsConfirmingDelete}">
+                                                                    <Button Content="Start" Command="{Binding StartCommand}" IsVisible="{Binding !IsActive}" />
+                                                                    <Button Content="Stop" Command="{Binding StopCommand}" IsVisible="{Binding IsActive}" />
+                                                                    <Button Content="Delete" Command="{Binding RequestDeleteCommand}" />
+                                                                </StackPanel>
+                                                                <StackPanel Orientation="Horizontal" Spacing="6"
+                                                                            IsVisible="{Binding IsConfirmingDelete}">
+                                                                    <TextBlock Text="Really delete?" VerticalAlignment="Center" />
+                                                                    <Button Content="Yes, delete" Command="{Binding ConfirmDeleteCommand}" />
+                                                                    <Button Content="Cancel" Command="{Binding CancelDeleteCommand}" />
+                                                                </StackPanel>
+                                                            </Panel>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Panel>
+            </TabItem>
+                <TabItem Header="Service tokens">
+                    <Panel>
+                        <TextBlock IsVisible="{Binding IsEmpty}" Classes="secondary"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
+                                   Text="No profiles yet.&#x0a;Service tokens are created via “+ New tunnel”." />
+
+                        <ScrollViewer>
+                            <ItemsControl ItemsSource="{Binding TokenGroups}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ServiceTokenGroupViewModel">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Classes="secondary"
+                                                       Margin="12,12,12,4" />
+                                            <TextBlock Text="No service tokens in this profile." Classes="secondary"
+                                                       Margin="12,0,12,8" IsVisible="{Binding IsEmpty}" />
+                                            <ItemsControl ItemsSource="{Binding Tokens}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:ServiceTokenItemViewModel">
+                                                        <Border Padding="12,10" BorderThickness="0,0,0,1"
+                                                                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                                                            <StackPanel>
+                                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                                                <TextBlock Classes="secondary">
+                                                                    <Run Text="Client ID: " /><Run Text="{Binding ClientId}" />
+                                                                </TextBlock>
+                                                                <TextBlock Classes="secondary" Classes.unused="{Binding IsUnused}"
+                                                                           Text="{Binding UsageText}" TextWrapping="Wrap" />
+
+                                                                <!-- Edit -->
+                                                                <StackPanel IsVisible="{Binding IsEditing}" Margin="0,4,0,0">
+                                                                    <TextBlock Classes="label" Text="Client ID" />
+                                                                    <TextBox Text="{Binding EditClientId}" />
+                                                                    <TextBlock Classes="label" Text="New client secret" />
+                                                                    <TextBox Text="{Binding EditSecret}" PasswordChar="•"
+                                                                             PlaceholderText="Leave empty to keep the current secret" />
+                                                                </StackPanel>
+
+                                                                <TextBlock Classes="error" Margin="0,4,0,0"
+                                                                           Text="{Binding Error}" IsVisible="{Binding HasError}" />
+
+                                                                <Panel Margin="0,6,0,0" HorizontalAlignment="Right">
+                                                                    <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsIdle}">
+                                                                        <Button Content="Edit" Command="{Binding EditCommand}" />
+                                                                        <Button Content="Delete" Command="{Binding RequestDeleteCommand}"
+                                                                                ToolTip.Tip="{Binding DeleteTip}" ToolTip.ShowOnDisabled="True" />
+                                                                    </StackPanel>
+                                                                    <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsEditing}">
+                                                                        <Button Content="Apply" Classes="accent" Command="{Binding ApplyEditCommand}" />
+                                                                        <Button Content="Cancel" Command="{Binding CancelEditCommand}" />
+                                                                    </StackPanel>
+                                                                    <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsConfirmingDelete}">
+                                                                        <TextBlock Text="Really delete?" VerticalAlignment="Center" />
+                                                                        <Button Content="Yes, delete" Command="{Binding ConfirmDeleteCommand}" />
+                                                                        <Button Content="Cancel" Command="{Binding CancelDeleteCommand}" />
+                                                                    </StackPanel>
+                                                                </Panel>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Panel>
+                </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>
