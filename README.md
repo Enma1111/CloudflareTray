@@ -1,6 +1,6 @@
 # Cloudflare Tunnel Manager
 
-A small tray app for Linux and Windows that starts and stops [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/applications/non-http/) TCP tunnels (`cloudflared access tcp`) with one click – for SSH, RDP, SMB or any other TCP service behind Cloudflare.
+A small tray app for Linux and Windows that starts and stops [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/applications/non-http/) TCP tunnels (`cloudflared access tcp`) with one click – for SSH, RDP, SMB or any other TCP service behind Cloudflare. A lightweight alternative to the WARP client when you only need a few TCP tunnels.
 
 - Tunnels are grouped into **profiles** – plain JSON files that are easy to share with colleagues
 - Optional **service tokens** for Cloudflare Access; secrets are encrypted at rest with a key from the OS keyring
