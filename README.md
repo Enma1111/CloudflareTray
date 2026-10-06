@@ -9,6 +9,8 @@ A small tray app for Linux and Windows that starts and stops [Cloudflare Access]
 - Tray icon shows the overall state (idle / running / reconnecting); closing the window keeps the tunnels running
 - Built with [Avalonia](https://avaloniaui.net/) and published as a **Native AOT** binary – no .NET runtime needed
 
+<p align="center"><img src="docs/screenshots/main-window.png" alt="Main window with two running tunnels" width="520"></p>
+
 ## Installation
 
 Download the archive for your platform from the [releases](../../releases) and unpack it.
