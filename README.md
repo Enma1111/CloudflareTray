@@ -20,6 +20,8 @@ Download the archive for your platform from the [releases](../../releases) and u
 
 The `README.txt` in each archive has the details.
 
+> **Windows SmartScreen:** The app is not code-signed, so Windows may show "Windows protected your PC" on first launch. Choose **More info → Run anyway**. To avoid the warning entirely, right-click the downloaded ZIP before unpacking, open **Properties** and tick **Unblock**.
+
 ### Requirements
 
 - **cloudflared 2026.9.3 or newer** in the `PATH`
